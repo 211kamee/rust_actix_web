@@ -1,7 +1,8 @@
 [package]
-name = "rust_rocket_app"
+name = "rust_actix_app"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-actix-web = "4"
+actix-web = "4.12.1"
+serde = { version = "1.0.228", features = ["derive"] }
