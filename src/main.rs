@@ -1,5 +1,6 @@
-use actix_web::*;
+use actix_web::{web::Json, *};
 use serde::*;
+use serde_json;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -16,6 +17,7 @@ async fn main() -> std::io::Result<()> {
             .service(display)
             .service(displaymsg)
             .service(query_param)
+            .service(login)
     })
     .bind(("0.0.0.0", 80))?
     .run()
@@ -48,4 +50,16 @@ async fn query_param(query: web::Query<Info>) -> impl Responder {
 struct Info {
     name: String,
     age: u16,
+}
+
+#[post("/login")]
+async fn login(data: Json<Login>) -> impl Responder {
+    // let msg = format!("{{user: {},key: {}}}", data.user, data.key);
+    HttpResponse::Ok().json(serde_json::to_string(&data).unwrap())
+}
+
+#[derive(Serialize, Deserialize)]
+struct Login {
+    user: String,
+    key: String
 }
