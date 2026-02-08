@@ -1,17 +1,18 @@
 use actix_web::{web::Json, *};
 use serde::*;
-use serde_json;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    let mut _port: u16 = 8080;
+
+    let msg: String = "Fahhhhh".to_string();
+
+    let server = HttpServer::new(move || {
         App::new()
+            .app_data(web::Data::new(msg.clone()))
             .route(
                 "/",
-                web::get().to(|| async {
-                    HttpResponse::Ok()
-                        .body("Running Live powered by RUST | Actix_Web   ".to_string())
-                }),
+                web::get().to(|| async { HttpResponse::Ok().body(format!("API is live.")) }),
             )
             .service(home)
             .service(display)
@@ -19,14 +20,16 @@ async fn main() -> std::io::Result<()> {
             .service(query_param)
             .service(login)
     })
-    .bind(("0.0.0.0", 80))?
-    .run()
-    .await
+    .bind(("0.0.0.0", _port))?;
+
+    println!("Bound to : http://localhost:{}", _port);
+
+    server.run().await
 }
 
 #[get("/home")]
-async fn home() -> impl Responder {
-    HttpResponse::Ok().body("/home")
+async fn home(msg: web::Data<String>) -> impl Responder {
+    HttpResponse::Ok().body(format!("/home\n{}", msg.as_ref()))
 }
 
 #[get("/display")]
@@ -55,11 +58,12 @@ struct Info {
 #[post("/login")]
 async fn login(data: Json<Login>) -> impl Responder {
     // let msg = format!("{{user: {},key: {}}}", data.user, data.key);
-    HttpResponse::Ok().json(serde_json::to_string(&data).unwrap())
+    // serde_json::to_string(&datunwrap() // is responding with a string, not json
+    HttpResponse::Ok().json(data)
 }
 
 #[derive(Serialize, Deserialize)]
 struct Login {
     user: String,
-    key: String
+    key: String,
 }
