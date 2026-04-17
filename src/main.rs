@@ -6,6 +6,17 @@ use std::{
 };
 
 #[derive(Deserialize)]
+struct MsgRequest {
+    user_prompt: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct LogEntry {
+    token: String,
+    user_prompt: String,
+}
+
+#[derive(Deserialize)]
 struct Info {
     name: String,
     age: u16,
@@ -38,15 +49,24 @@ async fn main() -> std::io::Result<()> {
 
     let collective_data = web::Data::new(Mutex::new(data));
 
+    let existing_logs: Vec<LogEntry> = read_to_string("./assets/temp-logs.json")
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default();
+    let logs: web::Data<Mutex<Vec<LogEntry>>> = web::Data::new(Mutex::new(existing_logs));
+
     let server = HttpServer::new(move || {
         App::new()
             .app_data(collective_data.clone())
+            .app_data(logs.clone())
             .route(
                 "/",
                 web::get().to(|| async { HttpResponse::Ok().body(format!("API is live.")) }),
             )
             .service(
                 web::scope("/api")
+                    .service(msg)
+                    .service(get_logs)
                     .service(home)
                     .service(display)
                     .service(displaymsg)
@@ -63,9 +83,46 @@ async fn main() -> std::io::Result<()> {
     server.run().await
 }
 
+#[post("/msg")]
+async fn msg(
+    req: HttpRequest,
+    body: Json<MsgRequest>,
+    logs: web::Data<Mutex<Vec<LogEntry>>>,
+) -> impl Responder {
+    let token = req
+        .headers()
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .unwrap_or("")
+        .to_string();
+
+    let entry = LogEntry {
+        token,
+        user_prompt: body.user_prompt.clone(),
+    };
+
+    let mut log_store = logs.lock().unwrap();
+    log_store.push(entry);
+
+    let _ = write("./assets/temp-logs.json", serde_json::to_string_pretty(&*log_store).unwrap());
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "message": "Agent is not active. However, your req is stored"
+    }))
+}
+
+#[get("/logs")]
+async fn get_logs() -> impl Responder {
+    let content = read_to_string("./assets/temp-logs.json").unwrap_or_else(|_| "[]".to_string());
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .body(content)
+}
+
 #[get("/home")]
-async fn home(msg: web::Data<String>) -> impl Responder {
-    HttpResponse::Ok().body(format!("/home\n{}", msg.as_ref()))
+async fn home() -> impl Responder {
+    HttpResponse::Ok().body("/home")
 }
 
 #[get("/display")]
