@@ -105,7 +105,10 @@ async fn msg(
     let mut log_store = logs.lock().unwrap();
     log_store.push(entry);
 
-    let _ = write("./assets/temp-logs.json", serde_json::to_string_pretty(&*log_store).unwrap());
+    let _ = write(
+        "./assets/temp-logs.json",
+        serde_json::to_string_pretty(&*log_store).unwrap(),
+    );
 
     HttpResponse::Ok().json(serde_json::json!({
         "message": "Agent is not active. However, your req is stored"
@@ -149,8 +152,8 @@ async fn displaymsg(path: web::Path<String>) -> impl Responder {
 
 #[get("/query")]
 async fn query_param(query: web::Query<Info>) -> impl Responder {
-    let msg = format!("name: {},\nage: {}", query.name, query.age);
-    HttpResponse::Ok().body(msg)
+    let this_msg = format!("name: {},\nage: {}", query.name, query.age);
+    HttpResponse::Ok().body(this_msg)
 }
 
 #[post("/login")]
