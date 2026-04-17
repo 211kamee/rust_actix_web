@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{web::Json, *};
 use serde::*;
 use std::{
@@ -56,7 +57,10 @@ async fn main() -> std::io::Result<()> {
     let logs: web::Data<Mutex<Vec<LogEntry>>> = web::Data::new(Mutex::new(existing_logs));
 
     let server = HttpServer::new(move || {
+        let cors = Cors::permissive();
+
         App::new()
+            .wrap(cors)
             .app_data(collective_data.clone())
             .app_data(logs.clone())
             .route(
